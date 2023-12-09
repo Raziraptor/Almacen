@@ -41,7 +41,7 @@ Java: Asegúrate de tener Java instalado en tu máquina. Puedes verificarlo ejec
 
 ### Cómo instalar el ambiente de desarrollo
 
-Clona el repositorio: git clone https://url-del-repositorio.git
+Clona el repositorio: git clone https://github.com/Raziraptor/Almacen
 Navega al directorio del proyecto: cd nombre-del-proyecto
 Compila el código fuente: javac ControlAlmacen.java
 
