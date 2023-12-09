@@ -1,4 +1,4 @@
-# Nombre del Proyecto
+# Control De Almacen
 
 ## Descripción
 
@@ -35,7 +35,6 @@ Gestor de Entrada/Salida (I/O): Coordina la entrada y salida de datos entre la c
 
 ## Requerimientos
 
-Requerimientos
 Java: Asegúrate de tener Java instalado en tu máquina. Puedes verificarlo ejecutando java -version en la línea de comandos.
 
 ## Instalación
@@ -77,7 +76,7 @@ No hay funciones específicas para administradores en este proyecto.
 
 ## Contribución
 
-Clona el repositorio: git clone https://url-del-repositorio.git
+Clona el repositorio: git clone https://github.com/Raziraptor/Almacen
 Crea un nuevo branch: git checkout -b nombre-del-branch
 Realiza tus contribuciones.
 Envía un Pull Request
