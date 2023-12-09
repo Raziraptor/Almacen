@@ -1,139 +1,162 @@
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.Scanner;
+
 public class ControlAlmacen {
 
-    private static final String NOMBRE_ARCHIVO = "salidas.xlsx";
+    private static final String NOMBRE_ARCHIVO = "salidas.csv";
 
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
+        try {
+            // Crear el archivo CSV si no existe
+            crearArchivoCSV();
 
-        while (true) {
-            System.out.println("1. Registrar Salida");
-            System.out.println("2. Registrar Regreso");
-            System.out.println("3. Salir");
-            System.out.print("Seleccione una opción: ");
+            // Lógica principal de la aplicación
+            Scanner scanner = new Scanner(System.in);
 
-            int opcion = scanner.nextInt();
+            while (true) {
+                System.out.println("1. Registrar Salida");
+                System.out.println("2. Registrar Regreso");
+                System.out.println("3. Mostrar Salidas");
+                System.out.println("4. Salir");
+                System.out.print("Seleccione una opción: ");
 
-            switch (opcion) {
-                case 1:
-                    registrarSalida();
-                    break;
-                case 2:
-                    registrarRegreso();
-                    break;
-                case 3:
-                    System.out.println("Saliendo de la aplicación. ¡Hasta luego!");
-                    System.exit(0);
-                    break;
-                default:
-                    System.out.println("Opción no válida. Inténtelo de nuevo.");
+                int opcion = scanner.nextInt();
+
+                switch (opcion) {
+                    case 1:
+                        registrarSalida();
+                        break;
+                    case 2:
+                        registrarRegreso();
+                        break;
+                    case 3:
+                        mostrarSalidas();
+                        break;
+                    case 4:
+                        System.out.println("Saliendo de la aplicación. ¡Hasta luego!");
+                        System.exit(0);
+                        break;
+                    default:
+                        System.out.println("Opción no válida. Inténtelo de nuevo.");
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void crearArchivoCSV() throws IOException {
+        File archivoCSV = new File(NOMBRE_ARCHIVO);
+        if (!archivoCSV.exists()) {
+            archivoCSV.createNewFile();
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(NOMBRE_ARCHIVO))) {
+                writer.write("ID,Quien,Herramienta/Material,Cantidad,EsRegreso");
+                writer.newLine();
             }
         }
     }
 
     private static void registrarSalida() {
-        try (Workbook workbook = new XSSFWorkbook()) {
-            Sheet sheet = obtenerHoja(workbook, "salidas");
-
-            System.out.println("Registros actuales de salidas:");
-            imprimirRegistros(sheet);
-
-            int lastRowNum = sheet.getLastRowNum();
-
-            Row newRow = sheet.createRow(lastRowNum + 1);
-            newRow.createCell(0).setCellValue(lastRowNum + 1);
-
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(NOMBRE_ARCHIVO, true))) {
             Scanner scanner = new Scanner(System.in);
 
             System.out.print("Ingrese quién: ");
-            newRow.createCell(1).setCellValue(scanner.nextLine());
+            String quien = scanner.next();
 
             System.out.print("Ingrese herramienta/material: ");
-            newRow.createCell(2).setCellValue(scanner.nextLine());
+            String herramientaMaterial = scanner.next();
 
             System.out.print("Ingrese cantidad (si es material): ");
-            newRow.createCell(3).setCellValue(scanner.nextInt());
+            int cantidad = scanner.nextInt();
 
-            try (FileOutputStream fileOut = new FileOutputStream(NOMBRE_ARCHIVO)) {
-                workbook.write(fileOut);
-                System.out.println("Salida registrada correctamente.");
-            }
+            // Obtener el siguiente ID basado en el número de líneas en el archivo
+            int id = obtenerSiguienteID();
+
+            // Escribir la nueva salida en el archivo CSV
+            writer.write(id + "," + quien + "," + herramientaMaterial + "," + cantidad + ",false");
+            writer.newLine();
+
+            System.out.println("Salida registrada correctamente.");
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     private static void registrarRegreso() {
-        try (FileInputStream fileIn = new FileInputStream(NOMBRE_ARCHIVO);
-             Workbook workbook = new XSSFWorkbook(fileIn)) {
-
-            Sheet sheet = obtenerHoja(workbook, "salidas");
-
-            System.out.println("Registros actuales de salidas:");
-            imprimirRegistros(sheet);
-
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(NOMBRE_ARCHIVO, true))) {
             Scanner scanner = new Scanner(System.in);
-            System.out.print("Ingrese el ID de la salida a la que desea registrar el regreso: ");
-            int idRegreso = scanner.nextInt();
 
-            int lastRowNum = sheet.getLastRowNum();
-            for (int i = 1; i <= lastRowNum; i++) {
-                Row row = sheet.getRow(i);
-                if (row.getCell(0).getNumericCellValue() == idRegreso) {
-                    sheet.removeRow(row);
-                    System.out.println("Regreso registrado correctamente.");
-                    break;
-                }
-            }
+            System.out.print("Ingrese ID de la salida a la que desea registrar el regreso: ");
+            String idRegresoStr = scanner.next();
 
-            // Reorganizar los ID después de eliminar una fila
-            reorganizarIDs(sheet);
+            try {
+                int idRegreso = Integer.parseInt(idRegresoStr);
 
-            try (FileOutputStream fileOut = new FileOutputStream(NOMBRE_ARCHIVO)) {
-                workbook.write(fileOut);
+                // Marcar la salida como regreso en el archivo CSV
+                marcarComoRegreso(idRegreso);
+
+                System.out.println("Regreso registrado correctamente.");
+            } catch (NumberFormatException ex) {
+                System.out.println("Formato de ID no válido. Inténtelo de nuevo.");
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private static void imprimirRegistros(Sheet sheet) {
-        int lastRowNum = sheet.getLastRowNum();
-        for (int i = 1; i <= lastRowNum; i++) {
-            Row row = sheet.getRow(i);
-            System.out.println("ID: " + (int) row.getCell(0).getNumericCellValue() +
-                    ", Quién: " + row.getCell(1).getStringCellValue() +
-                    ", Herramienta/Material: " + row.getCell(2).getStringCellValue() +
-                    ", Cantidad: " + (int) row.getCell(3).getNumericCellValue());
+    private static void marcarComoRegreso(int idRegreso) throws IOException {
+        // Crear una copia temporal del archivo
+        File archivoTemporal = new File("temporal.csv");
+        archivoTemporal.createNewFile();
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(NOMBRE_ARCHIVO));
+             BufferedWriter writer = new BufferedWriter(new FileWriter(archivoTemporal))) {
+
+            String linea;
+            while ((linea = reader.readLine()) != null) {
+                String[] partes = linea.split(",");
+
+                // Verificar si la línea tiene el formato esperado
+                if (partes.length == 5) {
+                    int id = Integer.parseInt(partes[0]);
+
+                    // Marcar como regreso si el ID coincide
+                    if (id == idRegreso) {
+                        partes[4] = "true";
+                    }
+                    writer.write(String.join(",", partes));
+                    writer.newLine();
+                } else {
+                    System.out.println("Error: Formato de línea no válido en el archivo CSV.");
+                }
+            }
+        }
+
+        // Reemplazar el archivo original con la copia temporal
+        archivoTemporal.renameTo(new File(NOMBRE_ARCHIVO));
+    }
+
+    private static void mostrarSalidas() {
+        try (BufferedReader reader = new BufferedReader(new FileReader(NOMBRE_ARCHIVO))) {
+            String linea;
+            while ((linea = reader.readLine()) != null) {
+                System.out.println(linea);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
-    private static void reorganizarIDs(Sheet sheet) {
-        int lastRowNum = sheet.getLastRowNum();
-        for (int i = 1; i <= lastRowNum; i++) {
-            Row row = sheet.getRow(i);
-            row.getCell(0).setCellValue(i);
+    private static int obtenerSiguienteID() {
+        try (BufferedReader reader = new BufferedReader(new FileReader(NOMBRE_ARCHIVO))) {
+            int lineCount = 0;
+            while (reader.readLine() != null) {
+                lineCount++;
+            }
+            return lineCount + 1;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return -1;
         }
-    }
-
-    private static Sheet obtenerHoja(Workbook workbook, String nombreHoja) {
-        Sheet sheet = workbook.getSheet(nombreHoja);
-        if (sheet == null) {
-            sheet = workbook.createSheet(nombreHoja);
-            Row headerRow = sheet.createRow(0);
-            headerRow.createCell(0).setCellValue("ID");
-            headerRow.createCell(1).setCellValue("Quién");
-            headerRow.createCell(2).setCellValue("Herramienta/Material");
-            headerRow.createCell(3).setCellValue("Cantidad");
-        }
-        return sheet;
     }
 }
